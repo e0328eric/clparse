@@ -96,8 +96,7 @@ typedef enum
     FLAG_TYPE_STRING,
 } FlagType;
 
-typedef union
-{
+typedef union {
     bool boolean;
     uint64_t u64;
     const char* str;
@@ -239,6 +238,23 @@ void drapeauPrintHelp(FILE* fp)
             fprintf(fp, "    -%*s%s\n", -(int)name_len - 4, main_flags[i].name,
                     main_flags[i].desc);
         }
+
+        if (subcommands_len > 0)
+        {
+            fprintf(fp, "\nSubcommands:\n");
+
+            for (size_t i = 0; i < subcommands_len; ++i)
+            {
+                tmp = strlen(subcommands[i].name);
+                name_len = name_len > tmp ? name_len : tmp;
+            }
+
+            for (size_t i = 0; i < subcommands_len; ++i)
+            {
+                fprintf(fp, "    %*s%s\n", -(int)name_len - 4,
+                        subcommands[i].name, subcommands[i].desc);
+            }
+        }
     }
 }
 
@@ -374,6 +390,7 @@ bool* drapeauBool(const char* restrict flag_name, bool dfault,
     Flag* flag = drapeauGetFlag(subcmd);
     if (flag == NULL)
     {
+        drapeau_err = DRAPEAU_ERR_KIND_SUBCOMMAND_FIND;
         return NULL;
     }
 
@@ -392,6 +409,7 @@ uint64_t* drapeauU64(const char* restrict flag_name, uint64_t dfault,
     Flag* flag = drapeauGetFlag(subcmd);
     if (flag == NULL)
     {
+        drapeau_err = DRAPEAU_ERR_KIND_SUBCOMMAND_FIND;
         return NULL;
     }
 
@@ -411,6 +429,7 @@ const char** drapeauStr(const char* restrict flag_name,
     Flag* flag = drapeauGetFlag(subcmd);
     if (flag == NULL)
     {
+        drapeau_err = DRAPEAU_ERR_KIND_SUBCOMMAND_FIND;
         return NULL;
     }
 
