@@ -6,4 +6,4 @@ WARNINGS = { "all", "extra", "pedantic", "conversion" }
 ERRORS = { "return-type" }
 FLAGS = { "-ggdb" }
 
-Compile("drapeauTest", "src/main.c", nil, nil, ".", nil)
+aedif.compile("drapeauTest", "src/main.c", nil, nil, ".", nil)
