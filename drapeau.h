@@ -53,7 +53,7 @@ extern "C"
  */
 // Function Signatures
 DRAPEAUDEF void drapeauStart(const char* name, const char* desc);
-DRAPEAUDEF bool drapeauParse(int argc, char** argv, bool allow_empty_arg);
+DRAPEAUDEF bool drapeauParse(int argc, const char** argv, bool allow_empty_arg);
 DRAPEAUDEF void drapeauClose(void);
 DRAPEAUDEF const char* drapeauGetErr(void);
 DRAPEAUDEF bool drapeauIsHelp(void);
@@ -122,8 +122,7 @@ typedef enum
     FLAG_TYPE_STRING,
 } FlagType;
 
-typedef union
-{
+typedef union {
     bool boolean;
     int8_t i8;
     int16_t i16;
@@ -237,8 +236,8 @@ void drapeauStart(const char* name, const char* desc)
     main_prog_name = name;
     main_prog_desc = desc;
     memset(hash_map, 0, sizeof(HashBox) * DRAPEAU_HASHMAP_CAPACITY);
-    memset(subcommands, 0, sizeof(Subcmd*) * SUBCOMMAND_CAPACITY);
-
+	memset(subcommands, 0, sizeof(Subcmd*) * SUBCOMMAND_CAPACITY);
+	
     help_cmd[help_cmd_len++] =
         drapeauBool("help", false, "Print this help message", NULL);
 }
@@ -250,10 +249,10 @@ void drapeauClose(void)
         freeNextHashBox(&hash_map[i]);
     }
 
-    for (size_t i = 0; i < SUBCOMMAND_CAPACITY; ++i)
-    {
-        free((void*)subcommands[i]);
-    }
+	for (size_t i = 0; i < SUBCOMMAND_CAPACITY; ++i)
+	{
+		free((void*)subcommands[i]);
+	}
 }
 
 bool drapeauIsHelp(void)
@@ -371,7 +370,7 @@ void drapeauPrintHelp(FILE* fp)
 // TODO: drapeau only thinks a given string is a flag if it has only one '-'
 // letter. For example, -v, -h and -version are considered as a flag, but
 // --version, --help are not.
-bool drapeauParse(int argc, char** argv, bool allow_empty_arg)
+bool drapeauParse(int argc, const char** argv, bool allow_empty_arg)
 {
     MainArg* main_args;
     size_t main_args_len;
@@ -581,7 +580,7 @@ bool* drapeauSubcmd(const char* subcmd_name, const char* desc)
     subcmd->main_args_len = 0;
     subcmd->flags_len = 0;
 
-    subcommands[subcommands_len++] = subcmd;
+	subcommands[subcommands_len++] = subcmd;
 
     help_cmd[help_cmd_len++] =
         drapeauBool("help", false, "Print this help message", subcmd_name);
@@ -657,8 +656,7 @@ const char* drapeauGetErr(void)
         return "Invalid number or overflowed number is given";
 
     case DRAPEAU_INTERNAL_ERROR:
-        snprintf(internal_err_msg, 200, "Internal error was found at %s",
-                 err_msg_detail);
+        snprintf(internal_err_msg, 200, "Internal error was found at %s", err_msg_detail);
         internal_err_msg[200] = '\0';
         return internal_err_msg;
 
