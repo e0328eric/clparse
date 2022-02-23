@@ -20,11 +20,17 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Drapeau Command line parser library v0.2.0
+// Drapeau Command line parser library v0.2.1
 //
 // It is a command line parser inspired by go's flag module and tsodings flag.h
 // ( tsodings flag.h source code : https://github.com/tsoding/flag.h )
 //
+//
+// Changelog
+// v0.1.0:                    First release
+// v0.2.0:                    Add essential arguments(it is called in here as
+//                            main argument)
+// v0.2.1:                    Fix a crucial memory bug
 
 #ifndef DRAPEAU_LIBRARY_H_
 #define DRAPEAU_LIBRARY_H_
@@ -43,9 +49,15 @@ extern "C"
 #endif // DRAPEAU_STATIC
 #endif // DRAPEAUDEF
 
+#ifdef __cpluplus
+#include <cstdbool>
+#include <cstdint>
+#include <cstdio>
+#else
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#endif // __cpluplus
 
     // clang-format off
 /* NOTE: Every flag, subcommand names and descriptions must have static
@@ -94,10 +106,10 @@ DRAPEAUDEF const char** drapeauMainArg(const char* name, const char* desc, const
 
 #ifdef __cplusplus
 #include <cassert>
+#include <cerrno>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <errno.h>
 #else
 #include <assert.h>
 #include <errno.h>
@@ -179,7 +191,7 @@ static const char* main_prog_name = NULL;
 static const char* main_prog_desc = NULL;
 static Subcmd* activated_subcmd = NULL;
 
-static Subcmd* subcommands[SUBCOMMAND_CAPACITY];
+static Subcmd subcommands[SUBCOMMAND_CAPACITY];
 static size_t subcommands_len = 0;
 
 static MainArg main_main_args[MAIN_ARGS_CAPACITY];
@@ -236,8 +248,8 @@ void drapeauStart(const char* name, const char* desc)
     main_prog_name = name;
     main_prog_desc = desc;
     memset(hash_map, 0, sizeof(HashBox) * DRAPEAU_HASHMAP_CAPACITY);
-	memset(subcommands, 0, sizeof(Subcmd*) * SUBCOMMAND_CAPACITY);
-	
+    memset(subcommands, 0, sizeof(Subcmd) * SUBCOMMAND_CAPACITY);
+
     help_cmd[help_cmd_len++] =
         drapeauBool("help", false, "Print this help message", NULL);
 }
@@ -248,11 +260,6 @@ void drapeauClose(void)
     {
         freeNextHashBox(&hash_map[i]);
     }
-
-	for (size_t i = 0; i < SUBCOMMAND_CAPACITY; ++i)
-	{
-		free((void*)subcommands[i]);
-	}
 }
 
 bool drapeauIsHelp(void)
@@ -355,13 +362,13 @@ void drapeauPrintHelp(FILE* fp)
 
             for (size_t i = 0; i < subcommands_len; ++i)
             {
-                tmp = strlen(subcommands[i]->name);
+                tmp = strlen(subcommands[i].name);
                 name_len = name_len > tmp ? name_len : tmp;
             }
             for (size_t i = 0; i < subcommands_len; ++i)
             {
                 fprintf(fp, "    %*s%s\n", -(int)name_len - 4,
-                        subcommands[i]->name, subcommands[i]->desc);
+                        subcommands[i].name, subcommands[i].desc);
             }
         }
     }
@@ -402,7 +409,7 @@ bool drapeauParse(int argc, const char** argv, bool allow_empty_arg)
             drapeau_err = DRAPEAU_ERR_KIND_SUBCOMMAND_FIND;
             return false;
         }
-        activated_subcmd = subcommands[pos];
+        activated_subcmd = &subcommands[pos];
         activated_subcmd->is_activate = true;
         main_args = activated_subcmd->main_args;
         main_args_len = activated_subcmd->main_args_len;
@@ -572,15 +579,13 @@ bool* drapeauSubcmd(const char* subcmd_name, const char* desc)
     hash_box->next = (HashBox*)malloc(sizeof(HashBox));
     hash_box->next->next = NULL;
 
-    subcmd = (Subcmd*)malloc(sizeof(Subcmd));
+    subcmd = &subcommands[subcommands_len++];
 
     subcmd->name = subcmd_name;
     subcmd->desc = desc;
     subcmd->is_activate = false;
     subcmd->main_args_len = 0;
     subcmd->flags_len = 0;
-
-	subcommands[subcommands_len++] = subcmd;
 
     help_cmd[help_cmd_len++] =
         drapeauBool("help", false, "Print this help message", subcmd_name);
@@ -656,7 +661,8 @@ const char* drapeauGetErr(void)
         return "Invalid number or overflowed number is given";
 
     case DRAPEAU_INTERNAL_ERROR:
-        snprintf(internal_err_msg, 200, "Internal error was found at %s", err_msg_detail);
+        snprintf(internal_err_msg, 200, "Internal error was found at %s",
+                 err_msg_detail);
         internal_err_msg[200] = '\0';
         return internal_err_msg;
 
@@ -681,17 +687,10 @@ static MainArg* drapeauGetMainArg(const char* subcmd)
             return NULL;
         }
 
-        if (subcommands[pos] == NULL)
-        {
-            drapeau_err = DRAPEAU_INTERNAL_ERROR;
-            err_msg_detail = "\ndrapeauGetMainArg: subcommand[pos] is NULL";
-            return NULL;
-        }
-
-        size_t* idx = &subcommands[pos]->main_args_len;
+        size_t* idx = &subcommands[pos].main_args_len;
         assert(*idx < MAIN_ARGS_CAPACITY);
 
-        main_arg = &subcommands[pos]->main_args[(*idx)++];
+        main_arg = &subcommands[pos].main_args[(*idx)++];
     }
     else
     {
@@ -714,17 +713,10 @@ static Flag* drapeauGetFlag(const char* subcmd)
             return NULL;
         }
 
-        if (subcommands[pos] == NULL)
-        {
-            drapeau_err = DRAPEAU_INTERNAL_ERROR;
-            err_msg_detail = "\ndrapeauGetFlag: subcommand[pos] is NULL";
-            return NULL;
-        }
-
-        size_t* idx = &subcommands[pos]->flags_len;
+        size_t* idx = &subcommands[pos].flags_len;
         assert(*idx < FLAG_CAPACITY);
 
-        flag = &subcommands[pos]->flags[(*idx)++];
+        flag = &subcommands[pos].flags[(*idx)++];
     }
     else
     {
