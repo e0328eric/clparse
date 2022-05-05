@@ -37,7 +37,6 @@
 #ifndef DRAPEAU_LIBRARY_H_
 #define DRAPEAU_LIBRARY_H_
 
-// TODO: Test this library in C++
 // clang-format off
 #ifdef __cplusplus
 extern "C"
@@ -602,7 +601,7 @@ bool drapeauParse(int argc, char** argv)
                 return false;
             }
 
-            main_args[current_main_arg].value = &argv[arg][0];
+            main_args[current_main_arg].value = argv[arg];
             ++current_main_arg;
             ++arg;
         }
