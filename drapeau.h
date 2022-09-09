@@ -350,6 +350,7 @@ void drapeauPrintHelp(void)
 {
 	size_t tmp;
 	size_t name_len = 0;
+	const char* main_arg_name;
 
 	if (main_prog_name == NULL)
 	{
@@ -366,10 +367,15 @@ void drapeauPrintHelp(void)
 		fprintf(stderr, "Usage: %s %s [ARGS] [FLAGS]\n\n", main_prog_name,
 				activated_subcmd->name);
 
-		fprintf(stderr, "Args:\n");
-		fprintf(stderr, "     %*s%s\n", -(int)name_len - 4,
-				activated_subcmd->main_arg.name,
-				activated_subcmd->main_arg.desc);
+		main_arg_name = activated_subcmd->main_arg.name;
+		if (main_arg_name != NULL)
+		{
+			name_len = strlen(main_arg_name);
+			fprintf(stderr, "Args:\n");
+			fprintf(stderr, "     %*s%s\n", -(int)name_len - 4,
+					activated_subcmd->main_arg.name,
+					activated_subcmd->main_arg.desc);
+		}
 
 		fprintf(stderr, "Options:\n");
 		for (size_t i = 0; i < activated_subcmd->flags_len; ++i)
@@ -406,9 +412,14 @@ void drapeauPrintHelp(void)
 			fprintf(stderr, "Usage: %s [ARGS] [FLAGS]\n\n", main_prog_name);
 		}
 
-		fprintf(stderr, "Args:\n");
-		fprintf(stderr, "     %*s%s\n", -(int)name_len - 4,
-				main_main_arg.name, main_main_arg.desc);
+		main_arg_name = main_main_arg.name;
+		if (main_arg_name != NULL)
+		{
+			name_len = strlen(main_arg_name);
+			fprintf(stderr, "Args:\n");
+			fprintf(stderr, "     %*s%s\n", -(int)name_len - 4,
+					main_main_arg.name, main_main_arg.desc);
+		}
 
 		fprintf(stderr, "Options:\n");
 		for (size_t i = 0; i < main_flags_len; ++i)
