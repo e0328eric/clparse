@@ -68,7 +68,7 @@ extern "C"
  */
 // Macros
 //
-// * DRAPEAU_IMPL
+// * DRAPEAU_IMPLEMENTATION
 // This library follows stb header only library format. That macro makes implementation
 // of functions include on the one of the source file.
 //
@@ -152,7 +152,7 @@ DRAPEAU_TYPES(T)
 /************************/
 /* START IMPLEMENTATION */
 /************************/
-#ifdef DRAPEAU_IMPL
+#ifdef DRAPEAU_IMPLEMENTATION
 
 #ifdef __cplusplus
 #include <cassert>
@@ -1051,4 +1051,4 @@ static bool isTruthy(const char* string)
 	}
 }
 
-#endif// DRAPEAU_IMPL
+#endif// DRAPEAU_IMPLEMENTATION
