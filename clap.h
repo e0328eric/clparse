@@ -529,7 +529,7 @@ bool clapParse(int argc, char** argv)
     if (argc < 2)
     {
 #ifdef NOT_ALLOW_EMPTY_ARGUMENT
-        clapPrintHelp(stderr);
+        clapPrintHelp();
         return false;
 #else
         return true;
