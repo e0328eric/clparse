@@ -260,7 +260,7 @@ static bool* help_cmd[SUBCOMMAND_CAPACITY + 1];
 static size_t help_cmd_len = 0;
 
 // Error kinds
-typedef enum DrapeauErrKind
+typedef enum ClapErrKind
 {
     CLAP_ERR_KIND_OK = 0,
     CLAP_ERR_KIND_SUBCOMMAND_FIND,
@@ -269,9 +269,9 @@ typedef enum DrapeauErrKind
     CLAP_ERR_KIND_INAVLID_NUMBER,
     CLAP_ERR_KIND_LONG_FLAG_WITH_SHORT_FLAG,
     CLAP_INTERNAL_ERROR,
-} DrapeauErrKind;
+} ClapErrKind;
 
-static DrapeauErrKind clap_err = (DrapeauErrKind)0;
+static ClapErrKind clap_err = (ClapErrKind)0;
 static char internal_err_msg[201];
 static const char* err_msg_detail = NULL;
 
