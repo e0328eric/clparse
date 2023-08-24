@@ -36,8 +36,8 @@
 // v0.4.0:                    Supports multiple arguments for flags and main
 // arguments
 
-#ifndef CLAP_LIBRARY_H_
-#define CLAP_LIBRARY_H_
+#ifndef CLPARSE_LIBRARY_H_
+#define CLPARSE_LIBRARY_H_
 
 // TODO: Test this library in C++
 // clang-format off
@@ -46,13 +46,13 @@ extern "C"
 {
 #endif
 
-#ifndef CLAPDEF
-#ifdef CLAP_STATIC
-#define CLAPDEF static
+#ifndef CLPARSEDEF
+#ifdef CLPARSE_STATIC
+#define CLPARSEDEF static
 #else
-#define CLAPDEF extern
+#define CLPARSEDEF extern
 #endif // CLAP_STATIC
-#endif // CLAPDEF
+#endif // CLPARSEDEF
 
 #ifdef __cplusplus
 #include <cstdbool>
@@ -69,12 +69,12 @@ extern "C"
  */
 // Macros
 //
-// * CLAP_IMPLEMENTATION
+// * CLPARSE_IMPLEMENTATION
 // This library follows stb header only library format. That macro makes implementation
 // of functions include on the one of the source file.
 //
 // * NOT_ALLOW_EMPTY_ARGUMENT
-// If this macro turns on, then clap disallows the empty argument and emit an error
+// If this macro turns on, then clparse disallows the empty argument and emit an error
 #define NO_SHORT 0
 #define NO_LONG ""
 #define NO_SUBCMD NULL
@@ -108,16 +108,16 @@ typedef struct
 } ArrayList;
 
 // Function Signatures
-CLAPDEF void clapStart(const char* name, const char* desc);
-CLAPDEF bool clapParse(int argc, char** argv);
-CLAPDEF void clapClose(void);
-CLAPDEF const char* clapGetErr(void);
-CLAPDEF bool clapIsHelp(void);
-CLAPDEF void clapPrintHelp(void);
+CLPARSEDEF void clparseStart(const char* name, const char* desc);
+CLPARSEDEF bool clparseParse(int argc, char** argv);
+CLPARSEDEF void clparseClose(void);
+CLPARSEDEF const char* clparseGetErr(void);
+CLPARSEDEF bool clparseIsHelp(void);
+CLPARSEDEF void clparsePrintHelp(void);
 
-CLAPDEF bool* clapSubcmd(const char* subcmd_name, const char* desc);
+CLPARSEDEF bool* clparseSubcmd(const char* subcmd_name, const char* desc);
 
-CLAPDEF const ArrayList* clapMainArg(const char* name, const char* desc, const char* subcmd);
+CLPARSEDEF const ArrayList* clparseMainArg(const char* name, const char* desc, const char* subcmd);
 
 #define CLAP_TYPES(T)                                                     \
 	T(Bool, bool, boolean, FLAG_TYPE_BOOL, ARRAY_LIST_BOOL)                  \
@@ -133,14 +133,14 @@ CLAPDEF const ArrayList* clapMainArg(const char* name, const char* desc, const c
     // clang-format on
 
 #define T(_name, _type, _foo1, _foo2, _foo3)                                   \
-    CLAPDEF _type* clap##_name(const char* flag_name, char short_name,         \
-                               _type dfault, const char* desc,                 \
-                               const char* subcmd);
+    CLPARSEDEF _type* clparse##_name(const char* flag_name, char short_name,   \
+                                     _type dfault, const char* desc,           \
+                                     const char* subcmd);
     CLAP_TYPES(T)
 #undef T
 
 #define T(_name, _type, _foo1, _foo2, _foo3)                                   \
-    CLAPDEF const ArrayList* clap##_name##List(                                \
+    CLPARSEDEF const ArrayList* clparse##_name##List(                          \
         const char* flag_name, char short_name, const char* desc,              \
         const char* subcmd);
     CLAP_TYPES(T)
@@ -149,12 +149,12 @@ CLAPDEF const ArrayList* clapMainArg(const char* name, const char* desc, const c
 #ifdef __cplusplus
 }
 #endif
-#endif // CLAP_LIBRARY_H_
+#endif // CLPARSE_LIBRARY_H_
 
 /************************/
 /* START IMPLEMENTATION */
 /************************/
-#ifdef CLAP_IMPLEMENTATION
+#ifdef CLPARSE_IMPLEMENTATION
 
 #ifdef __cplusplus
 #include <cassert>
@@ -271,7 +271,7 @@ typedef enum ClapErrKind
     CLAP_INTERNAL_ERROR,
 } ClapErrKind;
 
-static ClapErrKind clap_err = (ClapErrKind)0;
+static ClapErrKind clparse_err = (ClapErrKind)0;
 static char internal_err_msg[201];
 static const char* err_msg_detail = NULL;
 
@@ -293,16 +293,16 @@ static HashBox hash_map[CLAP_HASHMAP_CAPACITY];
 /******************************/
 static bool isTruthy(const char* string);
 static void deinitFlag(Flag* flag);
-static size_t clapHash(const char* letter);
-static MainArg* clapGetMainArg(const char* subcmd);
-static Flag* clapGetFlag(const char* subcmd);
+static size_t clparseHash(const char* letter);
+static MainArg* clparseGetMainArg(const char* subcmd);
+static Flag* clparseGetFlag(const char* subcmd);
 static bool findSubcmdPosition(size_t* output, const char* subcmd_name);
 static void freeNextHashBox(HashBox* hashbox);
 
 /************************************/
 /* Implementation of Main Functions */
 /************************************/
-void clapStart(const char* name, const char* desc)
+void clparseStart(const char* name, const char* desc)
 {
     main_prog_name = name;
     main_prog_desc = desc;
@@ -310,10 +310,10 @@ void clapStart(const char* name, const char* desc)
     memset(subcommands, 0, sizeof(Subcmd) * SUBCOMMAND_CAPACITY);
 
     help_cmd[help_cmd_len++] =
-        clapBool("help", NO_SHORT, false, "Print this help message", NULL);
+        clparseBool("help", NO_SHORT, false, "Print this help message", NULL);
 }
 
-void clapClose(void)
+void clparseClose(void)
 {
     for (size_t i = 0; i < CLAP_HASHMAP_CAPACITY; ++i)
     {
@@ -338,7 +338,7 @@ void clapClose(void)
     }
 }
 
-bool clapIsHelp(void)
+bool clparseIsHelp(void)
 {
     bool output = false;
 
@@ -350,7 +350,7 @@ bool clapIsHelp(void)
     return output;
 }
 
-void clapPrintHelp(void)
+void clparsePrintHelp(void)
 {
     size_t tmp;
     size_t name_len = 0;
@@ -464,14 +464,14 @@ void clapPrintHelp(void)
     }
 }
 
-// Helper macros to implement clapParse
+// Helper macros to implement clparseParse
 #define IMPL_PARSE_INTEGER(_field, _type)                                      \
     do                                                                         \
     {                                                                          \
         flag->kind._field = (_type)strtoull(argv[arg++], NULL, 0);             \
         if (errno == EINVAL || errno == ERANGE)                                \
         {                                                                      \
-            clap_err = CLAP_ERR_KIND_INAVLID_NUMBER;                           \
+            clparse_err = CLAP_ERR_KIND_INAVLID_NUMBER;                        \
             return false;                                                      \
         }                                                                      \
     } while (false)
@@ -509,7 +509,7 @@ void clapPrintHelp(void)
                 (_type)strtoull(argv[arg++], NULL, 0);                         \
             if (errno == EINVAL || errno == ERANGE)                            \
             {                                                                  \
-                clap_err = CLAP_ERR_KIND_INAVLID_NUMBER;                       \
+                clparse_err = CLAP_ERR_KIND_INAVLID_NUMBER;                    \
                 free(flag->kind.lst.items);                                    \
                 return false;                                                  \
             }                                                                  \
@@ -518,7 +518,7 @@ void clapPrintHelp(void)
                "argument parsing failed");                                     \
     } while (false)
 
-bool clapParse(int argc, char** argv)
+bool clparseParse(int argc, char** argv)
 {
     MainArg* main_arg;
     Flag* flags;
@@ -529,7 +529,7 @@ bool clapParse(int argc, char** argv)
     if (argc < 2)
     {
 #ifdef NOT_ALLOW_EMPTY_ARGUMENT
-        clapPrintHelp();
+        clparsePrintHelp();
         return false;
 #else
         return true;
@@ -542,7 +542,7 @@ bool clapParse(int argc, char** argv)
         size_t pos;
         if (!findSubcmdPosition(&pos, argv[arg++]))
         {
-            clap_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;
+            clparse_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;
             return false;
         }
         activated_subcmd = &subcommands[pos];
@@ -571,7 +571,7 @@ bool clapParse(int argc, char** argv)
         {
             if (main_arg->value.len >= MAIN_ARGS_CAPACITY)
             {
-                clap_err = CLAP_ERR_KIND_MAIN_ARG_NUM_OVERFLOWED;
+                clparse_err = CLAP_ERR_KIND_MAIN_ARG_NUM_OVERFLOWED;
                 return false;
             }
 
@@ -585,7 +585,7 @@ bool clapParse(int argc, char** argv)
             {
                 if (flags[j].name == NULL)
                 {
-                    clap_err = CLAP_ERR_KIND_FLAG_FIND;
+                    clparse_err = CLAP_ERR_KIND_FLAG_FIND;
                     return false;
                 }
                 while (j < flags_len &&
@@ -598,7 +598,7 @@ bool clapParse(int argc, char** argv)
             {
                 if (strlen(&argv[arg][1]) > 1)
                 {
-                    clap_err = CLAP_ERR_KIND_LONG_FLAG_WITH_SHORT_FLAG;
+                    clparse_err = CLAP_ERR_KIND_LONG_FLAG_WITH_SHORT_FLAG;
                     return false;
                 }
                 while (j < flags_len && argv[arg][1] != flags[j].short_name)
@@ -609,7 +609,7 @@ bool clapParse(int argc, char** argv)
 
             if (j >= flags_len)
             {
-                clap_err = CLAP_ERR_KIND_FLAG_FIND;
+                clparse_err = CLAP_ERR_KIND_FLAG_FIND;
                 return false;
             }
 
@@ -766,7 +766,7 @@ bool clapParse(int argc, char** argv)
                 break;
 
             default:
-                assert(false && "Unreatchable(clapParse)");
+                assert(false && "Unreatchable(clparseParse)");
                 return false;
             }
         }
@@ -777,13 +777,13 @@ bool clapParse(int argc, char** argv)
 #undef IMPL_PARSE_INTEGER
 #undef IMPL_PARSE_INTEGER_LIST
 
-bool* clapSubcmd(const char* subcmd_name, const char* desc)
+bool* clparseSubcmd(const char* subcmd_name, const char* desc)
 {
     assert(subcommands_len < SUBCOMMAND_CAPACITY);
 
     HashBox* hash_box;
     Subcmd* subcmd;
-    size_t hash = clapHash(subcmd_name);
+    size_t hash = clparseHash(subcmd_name);
 
     if (hash_map[hash].next != NULL)
     {
@@ -813,21 +813,21 @@ bool* clapSubcmd(const char* subcmd_name, const char* desc)
     subcmd->main_arg.value.items = NULL;
     subcmd->flags_len = 0;
 
-    help_cmd[help_cmd_len++] = clapBool("help", NO_SHORT, false,
-                                        "Print this help message", subcmd_name);
+    help_cmd[help_cmd_len++] = clparseBool(
+        "help", NO_SHORT, false, "Print this help message", subcmd_name);
 
     return &subcmd->is_activate;
 }
 
-const ArrayList* clapMainArg(const char* name, const char* desc,
-                             const char* subcmd)
+const ArrayList* clparseMainArg(const char* name, const char* desc,
+                                const char* subcmd)
 {
-    MainArg* main_arg = clapGetMainArg(subcmd);
+    MainArg* main_arg = clparseGetMainArg(subcmd);
     if (main_arg == NULL)
     {
         if (err_msg_detail == NULL)
         {
-            clap_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;
+            clparse_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;
         }
         return NULL;
     }
@@ -842,15 +842,15 @@ const ArrayList* clapMainArg(const char* name, const char* desc,
 }
 
 #define T(_name, _type, _arg, _flag_type, _foo)                                \
-    _type* clap##_name(const char* flag_name, char short_name, _type dfault,   \
-                       const char* desc, const char* subcmd)                   \
+    _type* clparse##_name(const char* flag_name, char short_name,              \
+                          _type dfault, const char* desc, const char* subcmd)  \
     {                                                                          \
-        Flag* flag = clapGetFlag(subcmd);                                      \
+        Flag* flag = clparseGetFlag(subcmd);                                   \
         if (flag == NULL)                                                      \
         {                                                                      \
             if (err_msg_detail == NULL)                                        \
             {                                                                  \
-                clap_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;                      \
+                clparse_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;                   \
             }                                                                  \
             return NULL;                                                       \
         }                                                                      \
@@ -865,20 +865,21 @@ const ArrayList* clapMainArg(const char* name, const char* desc,
         return &flag->kind._arg;                                               \
     }
 
-// implementation of clapBool kinds
+// implementation of clparseBool kinds
 CLAP_TYPES(T)
 #undef T
 
 #define T(_name, _type, _foo1, _foo2, _array_list_type)                        \
-    const ArrayList* clap##_name##List(const char* flag_name, char short_name, \
-                                       const char* desc, const char* subcmd)   \
+    const ArrayList* clparse##_name##List(const char* flag_name,               \
+                                          char short_name, const char* desc,   \
+                                          const char* subcmd)                  \
     {                                                                          \
-        Flag* flag = clapGetFlag(subcmd);                                      \
+        Flag* flag = clparseGetFlag(subcmd);                                   \
         if (flag == NULL)                                                      \
         {                                                                      \
             if (err_msg_detail == NULL)                                        \
             {                                                                  \
-                clap_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;                      \
+                clparse_err = CLAP_ERR_KIND_SUBCOMMAND_FIND;                   \
             }                                                                  \
             return NULL;                                                       \
         }                                                                      \
@@ -894,14 +895,14 @@ CLAP_TYPES(T)
         return &flag->kind.lst;                                                \
     }
 
-// implementation of clapBool kinds
+// implementation of clparseBool kinds
 CLAP_TYPES(T)
 #undef T
 
 // TODO: implement better and clean error printing message
-const char* clapGetErr(void)
+const char* clparseGetErr(void)
 {
-    switch (clap_err)
+    switch (clparse_err)
     {
     case CLAP_ERR_KIND_OK:
         return NULL;
@@ -928,7 +929,7 @@ const char* clapGetErr(void)
         return internal_err_msg;
 
     default:
-        assert(false && "Unreatchable (clapGetErr)");
+        assert(false && "Unreatchable (clparseGetErr)");
         return "";
     }
 }
@@ -936,7 +937,7 @@ const char* clapGetErr(void)
 /************************************/
 /* Static Functions Implementations */
 /************************************/
-static MainArg* clapGetMainArg(const char* subcmd)
+static MainArg* clparseGetMainArg(const char* subcmd)
 {
     MainArg* main_arg;
 
@@ -968,7 +969,7 @@ static void deinitFlag(Flag* flag)
     }
 }
 
-static Flag* clapGetFlag(const char* subcmd)
+static Flag* clparseGetFlag(const char* subcmd)
 {
     Flag* flag;
 
@@ -994,7 +995,7 @@ static Flag* clapGetFlag(const char* subcmd)
     return flag;
 }
 
-static size_t clapHash(const char* letter)
+static size_t clparseHash(const char* letter)
 {
     uint32_t hash = 0x811c9dc5;
     const uint32_t prime = 16777619;
@@ -1007,7 +1008,7 @@ static size_t clapHash(const char* letter)
 
 static bool findSubcmdPosition(size_t* output, const char* subcmd_name)
 {
-    size_t hash = clapHash(subcmd_name);
+    size_t hash = clparseHash(subcmd_name);
     HashBox* hashbox = &hash_map[hash];
 
     if (hashbox->name == NULL)
@@ -1067,4 +1068,4 @@ static bool isTruthy(const char* string)
     }
 }
 
-#endif // CLAP_IMPLEMENTATION
+#endif // CLPARSE_IMPLEMENTATION
