@@ -37,12 +37,6 @@ It is a command line parser inspired by go's flag module and tsodings flag.h
 #ifndef CLPARSE_LIBRARY_H_
 #define CLPARSE_LIBRARY_H_
 
-// TODO: Test this library in C++
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #ifndef CLPDEF
 #   ifdef CLPARSE_STATIC
 #       define CLPDEF static
@@ -171,9 +165,6 @@ CLPDEF void clparseFreeCmdlineW(const LPWSTR* argv);
     CLPARSE_TYPES(T)
 #undef T
 
-#ifdef __cplusplus
-}
-#endif
 #endif // CLPARSE_LIBRARY_H_
 
 /************************/
@@ -257,7 +248,7 @@ typedef union {
 
 typedef struct {
     const cchar* name;
-    char short_name;
+    cchar short_name;
     FlagType type;
     FlagKind kind;
     FlagKind dfault;
@@ -846,6 +837,7 @@ CLPARSE_TYPES(T)
         const cchar* desc,                                                     \
         const cchar* subcmd                                                    \
     ) {                                                                        \
+        (void)dfault;                                                          \
         Flag* flag = clparseGetFlag(subcmd);                                   \
         if (!flag) {                                                           \
             if (!err_msg_detail) {                                             \
@@ -858,7 +850,7 @@ CLPARSE_TYPES(T)
         flag->short_name = short_name;                                         \
         flag->type = FLAG_TYPE_LIST;                                           \
         flag->kind.lst.items = NULL;                                           \
-        flag->kind.lst.kind= _array_list_type;                                 \
+        flag->kind.lst.kind = _array_list_type;                                \
         flag->kind.lst.len = 0;                                                \
         flag->desc = desc;                                                     \
                                                                                \
@@ -1025,7 +1017,7 @@ static int cprintf_impl_(const cchar* fmt, ...) {
 #endif // !_WIN32
     if (len < 0) return -1;
 
-    wchar_t* buf = malloc(sizeof(wchar_t) * len);
+    wchar_t* buf = (wchar_t*)malloc(sizeof(wchar_t) * len);
     va_start(args, fmt);
     len = vswprintf(buf, len + 1, fmt, args);
     va_end(args);
