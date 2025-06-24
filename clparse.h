@@ -95,6 +95,30 @@ typedef wchar_t cchar;
 typedef char    cchar;
 #endif // USE_WIDE_ARGV
 
+// because of the different cchar* type, following macros are needed
+CLPDEF int cprintf_impl_(const cchar* fmt, ...);
+#ifdef USE_WIDE_ARGV
+#   define cstrlen    wcslen
+#   define cstrcmp    wcscmp
+#   define cstrtoull  wcstoull
+#   define iscdigit   iswdigit
+#   define CSTR2(val) L##val
+#   define CSTR(val)  CSTR2(val)
+#   define cprintf    cprintf_impl_
+#   define CCHAR_FMT  "lc"
+#   define CSTR_FMT   "ls"
+#else
+#   define cstrlen    strlen
+#   define cstrcmp    strcmp
+#   define cstrtoull  strtoull
+#   define iscdigit   isdigit
+#   define CSTR2(val) val
+#   define CSTR(val)  val
+#   define cprintf    cprintf_impl_
+#   define CCHAR_FMT  "c"
+#   define CSTR_FMT   "s"
+#endif // USE_WIDE_ARGV
+
 // Data Structure
 typedef enum {
     ARRAY_LIST_BOOL,
@@ -192,29 +216,6 @@ CLPDEF void clparseFreeCmdlineW(const LPWSTR* argv);
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
 #endif
-
-// because of the different cchar* type, following macros are needed
-#ifdef USE_WIDE_ARGV
-#   define cstrlen    wcslen
-#   define cstrcmp    wcscmp
-#   define cstrtoull  wcstoull
-#   define iscdigit   iswdigit
-#   define CSTR2(val) L##val
-#   define CSTR(val)  CSTR2(val)
-#   define cprintf    cprintf_impl_
-#   define CCHAR_FMT  "lc"
-#   define CSTR_FMT   "ls"
-#else
-#   define cstrlen    strlen
-#   define cstrcmp    strcmp
-#   define cstrtoull  strtoull
-#   define iscdigit   isdigit
-#   define CSTR2(val) val
-#   define CSTR(val)  val
-#   define cprintf    cprintf_impl_
-#   define CCHAR_FMT  "c"
-#   define CSTR_FMT   "s"
-#endif // USE_WIDE_ARGV
 
 // A Flag and a Subcmd struct definitions
 typedef enum {
@@ -337,7 +338,6 @@ static MainArg* clparseGetMainArg(const cchar* subcmd);
 static Flag* clparseGetFlag(const cchar* subcmd);
 static bool findSubcmdPosition(size_t* output, const cchar* subcmd_name);
 static void freeNextHashBox(HashBox* hashbox);
-static int cprintf_impl_(const cchar* fmt, ...);
 
 /************************************/
 /* Implementation of Main Functions */
@@ -1002,7 +1002,7 @@ static bool isTruthy(const cchar* string) {
     }
 }
 
-static int cprintf_impl_(const cchar* fmt, ...) {
+int cprintf_impl_(const cchar* fmt, ...) {
 #ifdef USE_WIDE_ARGV
     va_list args;
     va_start(args, fmt);
@@ -1035,16 +1035,5 @@ static int cprintf_impl_(const cchar* fmt, ...) {
     va_end(args);
 #endif // USE_WIDE_ARGV
 }
-
-// undefine helper macros
-#undef cstrlen
-#undef cstrcmp
-#undef cstrtoull
-#undef CSTR2
-#undef CSTR
-#undef cprintf
-#undef iscdigit
-#undef CCHAR_FMT
-#undef CSTR_FMT
 
 #endif // CLPARSE_IMPLEMENTATION
