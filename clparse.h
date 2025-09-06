@@ -432,46 +432,46 @@ void clparsePrintHelp(void) {
             cprintf(CSTR("Usage: %"CSTR_FMT" [ARGS] [FLAGS]\n\n"),
                 main_prog_name);
         }
-    }
 
-    cprintf(CSTR("Args:\n"));
-    for (size_t i = 0; i < main_args_len; ++i) {
-        name_len = cstrlen(main_main_args[i].name);
-        cprintf(CSTR("    %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
-            main_main_args[i].name, main_main_args[i].desc);
-    }
-
-    cprintf(CSTR("Options:\n"));
-    for (size_t i = 0; i < main_flags_len; ++i) {
-        tmp = cstrlen(main_flags[i].name);
-        name_len = name_len > tmp ? name_len : tmp;
-    }
-    for (size_t i = 0; i < main_flags_len; ++i) {
-        if (cstrcmp(main_flags[i].name, NO_LONG) != 0) {
-            cprintf(CSTR("    --%*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
-                main_flags[i].name, main_flags[i].desc);
-        } else if (main_flags[i].short_name == NO_SHORT) {
-            cprintf(CSTR("    -%*"CCHAR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
-                main_flags[i].short_name, main_flags[i].desc);
-        } else {
-            cprintf(CSTR("    -%*"CCHAR_FMT" --%*"CSTR_FMT"%"CSTR_FMT"\n"),
-                -(int)name_len - 4,
-                main_flags[i].short_name,
-                main_flags[i].name,
-                main_flags[i].desc);
+        cprintf(CSTR("Args:\n"));
+        for (size_t i = 0; i < main_args_len; ++i) {
+            name_len = cstrlen(main_main_args[i].name);
+            cprintf(CSTR("    %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
+                main_main_args[i].name, main_main_args[i].desc);
         }
-    }
 
-    if (subcommands_len > 0) {
-        cprintf(CSTR("\nSubcommands:\n"));
-
-        for (size_t i = 0; i < subcommands_len; ++i) {
-            tmp = cstrlen(subcommands[i].name);
+        cprintf(CSTR("Options:\n"));
+        for (size_t i = 0; i < main_flags_len; ++i) {
+            tmp = cstrlen(main_flags[i].name);
             name_len = name_len > tmp ? name_len : tmp;
         }
-        for (size_t i = 0; i < subcommands_len; ++i) {
-            cprintf(CSTR("    %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
-                subcommands[i].name, subcommands[i].desc);
+        for (size_t i = 0; i < main_flags_len; ++i) {
+            if (cstrcmp(main_flags[i].name, NO_LONG) != 0) {
+                cprintf(CSTR("    --%*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
+                    main_flags[i].name, main_flags[i].desc);
+            } else if (main_flags[i].short_name == NO_SHORT) {
+                cprintf(CSTR("    -%*"CCHAR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
+                    main_flags[i].short_name, main_flags[i].desc);
+            } else {
+                cprintf(CSTR("    -%*"CCHAR_FMT" --%*"CSTR_FMT"%"CSTR_FMT"\n"),
+                    -(int)name_len - 4,
+                    main_flags[i].short_name,
+                    main_flags[i].name,
+                    main_flags[i].desc);
+            }
+        }
+
+        if (subcommands_len > 0) {
+            cprintf(CSTR("\nSubcommands:\n"));
+
+            for (size_t i = 0; i < subcommands_len; ++i) {
+                tmp = cstrlen(subcommands[i].name);
+                name_len = name_len > tmp ? name_len : tmp;
+            }
+            for (size_t i = 0; i < subcommands_len; ++i) {
+                cprintf(CSTR("    %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
+                    subcommands[i].name, subcommands[i].desc);
+            }
         }
     }
 }
