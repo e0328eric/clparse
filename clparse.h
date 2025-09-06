@@ -147,10 +147,12 @@ CLPDEF const char* clparseGetErr(void);
 CLPDEF bool clparseIsHelp(void);
 CLPDEF void clparsePrintHelp(void);
 CLPDEF bool* clparseSubcmd(const cchar* subcmd_name, const cchar* desc);
-CLPDEF const ArrayList* clparseMainArg(const cchar* name, const cchar* desc, const cchar* subcmd);
+CLPDEF const cchar** clparseMainArg(const cchar* name, const cchar* desc, const cchar* subcmd);
 
 // windows specific feature
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(NO_USE_WIDE_ARGV)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 CLPDEF bool clparseGetCmdlineW(int* argc, LPWSTR** argv);
 CLPDEF void clparseFreeCmdlineW(const LPWSTR* argv);
 #endif
@@ -262,7 +264,7 @@ typedef struct {
 
 typedef struct {
     const cchar* name;
-    ArrayList value;
+    const cchar* value;
     const cchar* desc;
 } MainArg;
 
@@ -274,7 +276,8 @@ typedef struct Subcmd {
     const cchar* name;
     const cchar* desc;
     bool is_activate;
-    MainArg main_arg;
+    MainArg main_args[MAIN_ARGS_CAPACITY];
+    size_t main_args_len;
     Flag flags[FLAG_CAPACITY];
     size_t flags_len;
 } Subcmd;
@@ -291,7 +294,8 @@ static Subcmd* activated_subcmd = NULL;
 static Subcmd subcommands[SUBCOMMAND_CAPACITY];
 static size_t subcommands_len = 0;
 
-static MainArg main_main_arg;
+static MainArg main_main_args[MAIN_ARGS_CAPACITY];
+static size_t main_args_len = 0;
 
 static Flag main_flags[FLAG_CAPACITY];
 static size_t main_flags_len = 0;
@@ -305,7 +309,7 @@ typedef enum ClparseErrKind
     CLPARSE_ERR_KIND_OK = 0,
     CLPARSE_ERR_KIND_SUBCOMMAND_FIND,
     CLPARSE_ERR_KIND_FLAG_FIND,
-    CLPARSE_ERR_KIND_MAIN_ARG_NUM_OVERFLOWED,
+    CLPARSE_ERR_KIND_MAIN_ARGS_NUM_OVERFLOWED,
     CLPARSE_ERR_KIND_INAVLID_NUMBER,
     CLPARSE_ERR_KIND_LONG_FLAG_WITH_SHORT_FLAG,
     CLPARSE_INTERNAL_ERROR,
@@ -357,7 +361,6 @@ void clparseDeinit(void) {
         freeNextHashBox(&hash_map[i]);
     }
 
-    free(main_main_arg.value.items);
     for (size_t i = 0; i < main_flags_len; ++i) {
         deinitFlag(&main_flags[i]);
     }
@@ -365,7 +368,6 @@ void clparseDeinit(void) {
     Subcmd* subcmd;
     for (size_t i = 0; i < subcommands_len; ++i) {
         subcmd = &subcommands[i];
-        free(subcmd->main_arg.value.items);
         for (size_t j = 0; j < subcmd->flags_len; ++j) {
             deinitFlag(&subcmd->flags[j]);
         }
@@ -384,7 +386,6 @@ bool clparseIsHelp(void) {
 
 void clparsePrintHelp(void) {
     size_t tmp, name_len = 0;
-    const cchar* main_arg_name;
 
     if (!main_prog_name) main_prog_name = CSTR("(*.*)");
     if (main_prog_desc) cprintf(CSTR("%s\n\n"), main_prog_desc);
@@ -393,13 +394,12 @@ void clparsePrintHelp(void) {
         cprintf(CSTR("Usage: %"CSTR_FMT" %"CSTR_FMT" [ARGS] [FLAGS]\n\n"),
             main_prog_name, activated_subcmd->name);
 
-        main_arg_name = activated_subcmd->main_arg.name;
-        if (main_arg_name) {
-            name_len = cstrlen(main_arg_name);
-            cprintf(CSTR("Args:\n"));
+        cprintf(CSTR("Args:\n"));
+        for (size_t i = 0; i < activated_subcmd->main_args_len; ++i) {
+            name_len = cstrlen(activated_subcmd->main_args[i].name);
             cprintf(CSTR("     %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
-                activated_subcmd->main_arg.name,
-                activated_subcmd->main_arg.desc);
+                activated_subcmd->main_args[i].name,
+                activated_subcmd->main_args[i].desc);
         }
 
         cprintf(CSTR("Options:\n"));
@@ -434,12 +434,11 @@ void clparsePrintHelp(void) {
         }
     }
 
-    main_arg_name = main_main_arg.name;
-    if (main_arg_name) {
-        name_len = cstrlen(main_arg_name);
-        cprintf(CSTR("Args:\n"));
+    cprintf(CSTR("Args:\n"));
+    for (size_t i = 0; i < main_args_len; ++i) {
+        name_len = cstrlen(main_main_args[i].name);
         cprintf(CSTR("    %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
-            main_main_arg.name, main_main_arg.desc);
+            main_main_args[i].name, main_main_args[i].desc);
     }
 
     cprintf(CSTR("Options:\n"));
@@ -524,9 +523,10 @@ void clparsePrintHelp(void) {
     } while (0)
 
 bool clparseParse(int argc, cchar** argv) {
-    MainArg* main_arg;
+    MainArg* main_args;
     Flag *flags, *flag;
-    size_t flags_len;
+    size_t total_args_count, total_flags_count;
+    size_t args_count = 0, flags_count = 0;
     int arg = 1;
 
     if (argc < 2) {
@@ -547,51 +547,54 @@ bool clparseParse(int argc, cchar** argv) {
         }
         activated_subcmd = &subcommands[pos];
         activated_subcmd->is_activate = true;
-        main_arg = &activated_subcmd->main_arg;
+
+        main_args = activated_subcmd->main_args;
+        main_args_len = activated_subcmd->main_args_len;
         flags = activated_subcmd->flags;
-        flags_len = activated_subcmd->flags_len;
+        total_flags_count = activated_subcmd->flags_len;
     } else {
-        main_arg = &main_main_arg;
+        main_args = main_main_args;
+        total_args_count = main_args_len;
         flags = main_flags;
-        flags_len = main_flags_len;
+        total_flags_count = main_flags_len;
     }
+
     while (arg < argc) {
         if (cstrcmp(argv[arg], CSTR("--")) == 0) {
             ++arg;
             continue;
         }
 
-        size_t j = 0;
         if (argv[arg][0] != CSTR('-')) {
-            if (main_arg->value.len >= MAIN_ARGS_CAPACITY) {
-                clparse_err = CLPARSE_ERR_KIND_MAIN_ARG_NUM_OVERFLOWED;
+            if (args_count >= total_args_count) {
+                clparse_err = CLPARSE_ERR_KIND_MAIN_ARGS_NUM_OVERFLOWED;
                 return false;
             }
-
-            ((const cchar**)main_arg->value.items)[main_arg->value.len++] = argv[arg++];
+            main_args[args_count++].value = argv[arg++];
+            continue;
         } else {
             if (argv[arg][1] == CSTR('-')) {
-                if (!flags[j].name) {
+                if (!flags[flags_count].name) {
                     clparse_err = CLPARSE_ERR_KIND_FLAG_FIND;
                     return false;
                 }
-                for (; j < flags_len &&
-                    cstrcmp(&argv[arg][2], flags[j].name) != 0; ++j);
+                for (; flags_count < total_flags_count &&
+                    cstrcmp(&argv[arg][2], flags[flags_count].name) != 0; ++flags_count);
             } else {
                 if (cstrlen(&argv[arg][1]) > 1) {
                     clparse_err = CLPARSE_ERR_KIND_LONG_FLAG_WITH_SHORT_FLAG;
                     return false;
                 }
-                for (; j < flags_len && argv[arg][1] != flags[j].short_name; ++j);
+                for (; flags_count < total_flags_count && argv[arg][1] != flags[flags_count].short_name; ++flags_count);
             }
         }
 
-        if (j >= flags_len) {
+        if (flags_count >= total_flags_count) {
             clparse_err = CLPARSE_ERR_KIND_FLAG_FIND;
             return false;
         }
 
-        flag = &flags[j];
+        flag = &flags[flags_count];
         ++arg;
 
         switch (flag->type) {
@@ -767,9 +770,7 @@ bool* clparseSubcmd(const cchar* subcmd_name, const cchar* desc) {
     subcmd->name = subcmd_name;
     subcmd->desc = desc;
     subcmd->is_activate = false;
-    subcmd->main_arg.value.kind = ARRAY_LIST_STRING;
-    subcmd->main_arg.value.len = 0;
-    subcmd->main_arg.value.items = NULL;
+    subcmd->main_args_len = 0;
     subcmd->flags_len = 0;
 
     help_cmd[help_cmd_len++] =
@@ -779,7 +780,7 @@ bool* clparseSubcmd(const cchar* subcmd_name, const cchar* desc) {
     return &subcmd->is_activate;
 }
 
-const ArrayList* clparseMainArg(
+const cchar** clparseMainArg(
     const cchar* name,
     const cchar* desc,
     const cchar* subcmd
@@ -791,9 +792,7 @@ const ArrayList* clparseMainArg(
     }
 
     main_arg->name = name;
-    main_arg->value.kind = ARRAY_LIST_STRING;
-    main_arg->value.len = 0;
-    main_arg->value.items = malloc(sizeof(const cchar*) * MAIN_ARGS_CAPACITY);
+    main_arg->value = NULL; // after clparseParse, it sets to appropriate value
     main_arg->desc = desc;
 
     return &main_arg->value;
@@ -873,7 +872,7 @@ const char* clparseGetErr(void) {
     case CLPARSE_ERR_KIND_FLAG_FIND:
         return "Cannot find an appropriate flag";
 
-    case CLPARSE_ERR_KIND_MAIN_ARG_NUM_OVERFLOWED:
+    case CLPARSE_ERR_KIND_MAIN_ARGS_NUM_OVERFLOWED:
         return "Too many main arguments are given";
 
     case CLPARSE_ERR_KIND_INAVLID_NUMBER:
@@ -894,7 +893,7 @@ const char* clparseGetErr(void) {
     }
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(NO_USE_WIDE_ARGV)
 bool clparseGetCmdlineW(int* argc, LPWSTR** argv) {
     LPWSTR args = GetCommandLineW();
     *argv = CommandLineToArgvW(args, argc);
@@ -915,10 +914,19 @@ static MainArg* clparseGetMainArg(const cchar* subcmd) {
     if (subcmd) {
         size_t pos;
         if (!findSubcmdPosition(&pos, subcmd)) return NULL;
-        main_arg = &subcommands[pos].main_arg;
+        Subcmd* subcmd = &subcommands[pos];
+        if (subcmd->main_args_len >= MAIN_ARGS_CAPACITY) {
+            clparse_err = CLPARSE_ERR_KIND_MAIN_ARGS_NUM_OVERFLOWED;
+            return NULL;
+        }
+        main_arg = &subcmd->main_args[subcmd->main_args_len++];
     }
     else {
-        main_arg = &main_main_arg;
+        if (main_args_len >= MAIN_ARGS_CAPACITY) {
+            clparse_err = CLPARSE_ERR_KIND_MAIN_ARGS_NUM_OVERFLOWED;
+            return NULL;
+        }
+        main_arg = &main_main_args[main_args_len++];
     }
 
     return main_arg;
@@ -1031,8 +1039,9 @@ int cprintf_impl_(const cchar* fmt, ...) {
 #else
     va_list args;
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
+    int len = vfprintf(stderr, fmt, args);
     va_end(args);
+    return len;
 #endif // USE_WIDE_ARGV
 }
 
