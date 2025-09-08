@@ -396,7 +396,10 @@ void clparsePrintHelp(void) {
 
         cprintf(CSTR("Args:\n"));
         for (size_t i = 0; i < activated_subcmd->main_args_len; ++i) {
-            name_len = cstrlen(activated_subcmd->main_args[i].name);
+            tmp = cstrlen(activated_subcmd->main_args[i].name);
+            name_len = name_len > tmp ? name_len : tmp;
+        }
+        for (size_t i = 0; i < activated_subcmd->main_args_len; ++i) {
             cprintf(CSTR("     %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
                 activated_subcmd->main_args[i].name,
                 activated_subcmd->main_args[i].desc);
@@ -435,7 +438,10 @@ void clparsePrintHelp(void) {
 
         cprintf(CSTR("Args:\n"));
         for (size_t i = 0; i < main_args_len; ++i) {
-            name_len = cstrlen(main_main_args[i].name);
+            tmp = cstrlen(main_main_args[i].name);
+            name_len = name_len > tmp ? name_len : tmp;
+        }
+        for (size_t i = 0; i < main_args_len; ++i) {
             cprintf(CSTR("    %*"CSTR_FMT"%"CSTR_FMT"\n"), -(int)name_len - 4,
                 main_main_args[i].name, main_main_args[i].desc);
         }
